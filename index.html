@@ -1,7 +1,9 @@
 <!DOCTYPE html>
-<title> Todo App </title>
+<title> Todo App | Mithril </title>
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mithril/0.2.0/mithril.js"></script>
 <script>
+	// Here's a sample of a mithril app.
 	// an app lives within a namespace and has one or more components.
 	// components represent an entire page, or a part of a page. 
 	// the app follows MVC conventions. 
@@ -9,14 +11,14 @@
 	// this one component will be the namespace for the entire app, aptly called
 	// todo. 
 
-	// Models should be designed to be reusable. Although Models usuall live 
-	// outside the components, here we'll roll it up
-	// within the component namespace. 
-
 	var todo = {
 		controller: function() {},
 		view: function() {}
 	}
+
+	// Models should be designed to be reusable. Although Models usuall live 
+	// outside the components, here we'll roll it up
+	// within the component namespace. 
 
 	// Todo class will have two properties – description and done.
 	// here we use m.prop as a factor for getter/setters. 
@@ -26,4 +28,164 @@
 		this.done = m.prop(false); //tasks are false by default
 	}
 
+	// the TodoList class will be an array of Todo's
+	// note that you're implying here taht your app will support all of the
+	// Array prototype's functions:
+	todo.TodoList = Array;
+
+	// next thing to do is add a View-Model, which is in charge of storing UI 
+	// state. Mithril says UI state is model data, even though it doesn't 
+	// neccesarily map to an ORM db-backed entity. View-Model also handles
+	// business logic on the UI, such as cancelling out of something or storing
+	// original vs current state of input boxes, say. 
+
+	// we want our view model (or vm for short) to
+	/*
+		- have a running list of todos
+		- hold the description of a todo
+		- add the new todo to a running list
+	*/
+	// here's the implementation: 
+
+	todo.vm = {
+		init: function(){
+			// the list
+			todo.vm.list = new todo.TodoList();
+			// the description
+			todo.vm.description = m.prop('');
+			// adds a todo list using the Todo models
+			todo.vm.add = function(){
+				if (todo.vm.description()) {
+					todo.vm.list.push(new todo.Todo({description: todo.vm.description()}));
+					todo.vm.description('');
+				};
+			};
+		}	
+	};
+
+	// OK so we have models (which save state + business logic), then vm's (which
+	// handle UI logic and state.) Now we need controllers. 
+	// Controllers in server-side apps (like Rails) have to deal with serialization
+	// of http inputs into ORM objects, like parameters and so on. Not so with 
+	// client-side controllers. All our controller really needs to do is expose
+	// a part of the Model functionality that is relevant to the UI at hand. 
+
+	// All we've added up to now is neccesary for the UI, so we'll call init() for
+	// the VM from the controller: 
+
+	todo.controller = function(){ todo.vm.init(); }
+
+	// let's set up the view. m() creates virtual DOM elements. here we go:
+
+	todo.view = function () {
+		return m('html',[
+			m('body', [
+				// m('input'),
+				m("input", {onchange: m.withAttr('value', todo.vm.description),
+					value: todo.vm.description()}),
+				// Here's the simple version of the button without binding: 
+				// m('button', 'Add'),
+				m('button', {onclick: todo.vm.add}, 'Add'),
+				m('table', [
+					todo.vm.list.map(function(task, i){
+						return m('tr', [
+							m('td', [
+								m('input[type=checkbox]', {onclick: m.withAttr('checked', task.done),
+									checked: task.done()})
+							]),
+							m('td', {style: {textDecoration: task.done() ? 'line-through' : 'none'}}, task.description()),
+						]);
+					})
+				])
+			])
+		]);
+	}
+
+	// if you call m.render(document, todo.view()); this will get parsed out into
+	// html on the root document. It still has no auto-redrawing yet. But that's
+	// cool. 
+
+	// Let's get some data binding going. 
+	// m('input', {value: todo.vm.description()});
+
+	// Every time you render that, it's going to check for the value and swap that out.
+	// Here's where the react-like behavior happens - it just checks for virtual dom
+	// changes and swaps them out. 
+
+	// you can also change it to be bi-directional: you assign an event listener 
+	// and tell it what to update in your model(onchange could be onkeypress, etc): 
+
+	// m('input', {onchange: m.withAttr('value', todo.vm.description),
+								// 	value: todo.vm.description()});
+
+	// oh snap! we can add also parameterized binded functions onto the events that
+	// get added on the 'data binding'. Let's say we want the button to add the list
+	// by *always* using the todo.vm.description() as argument to the todo.vm.add()
+	// function. Well this is what you would do: 
+	/*
+			todo.vm.add(todo.vm.description);
+	*/
+	// This is how you would bind a parameterized function onto that so it always
+	// uses the todo.vm.description function as argment: 
+	/*
+			var todo = todo.vm;
+			vm.add.bind(vm, vm.description);
+	*/
+	// and this is how you put it all together into the button: 
+	/*
+			var vm = todo.vm;
+			m('button', {onclick: vm.add.bind(vm, vm.description)});
+	*/
+	// notice that this passes the argument *by reference*, not by value (so it
+	// is lazy evaluation). 
+
+	// Another thing we can change is that in our vm.add() function, we can use 
+	// the same concept and no longer require a parameter in it by pointing to 
+	// todo.vm.description within the function. That's how mithril intends us to
+	// use m.prop().
+
+
+	// with that change, our code for adding the button functionality becomes much simpler: 
+	/*
+			var vm = todo.vm;
+			m('button', {onclick: todo.vm.add}, 'Add');
+	*/
+
+	// to add logic and flows into the views, you use straight up Javascript array methods: 
+	/*
+		m('table', [
+			todo.vm.list.map(function(task, i){
+				return m('tr', [
+					m('td', [
+						m('input[type=checkbox]')
+					]),
+					m('td', task.description()),
+				]);
+			})
+		])
+	*/	
+
+	// we'll take the idioms presented above and finish out the application, namely: 
+	// - add functionality to the checkbox
+	// - add styling(css) to a task description task depending on whether it's done
+	// 		or not
+
+	// the last part is to have everything redraw automatically upon model changes. 
+	m.mount(document, {controller: todo.controller, view: todo.view});
+
 </script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
