@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<title> Todo App </title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mithril/0.2.0/mithril.js"></script>
+<script>
+	// an app lives within a namespace and has one or more components.
+	// components represent an entire page, or a part of a page. 
+	// the app follows MVC conventions. 
+
+	// this one component will be the namespace for the entire app, aptly called
+	// todo. 
+
+	// Models should be designed to be reusable. Although Models usuall live 
+	// outside the components, here we'll roll it up
+	// within the component namespace. 
+
+	var todo = {
+		controller: function() {},
+		view: function() {}
+	}
+
+	// Todo class will have two properties – description and done.
+	// here we use m.prop as a factor for getter/setters. 
+
+	todo.Todo = function (data) {
+		this.description = m.prop(data.description);
+		this.done = m.prop(false); //tasks are false by default
+	}
+
+</script>
